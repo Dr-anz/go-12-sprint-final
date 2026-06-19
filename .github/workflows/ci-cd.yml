@@ -4,11 +4,11 @@ on:
   push:
     branches:
       - main
-  pull_requests:
+    tags:
+      - 'v*'
+  pull_request:
     branches:
       - main
-  tags:
-    - 'v*'
 
 jobs:
   test-and-lint:
