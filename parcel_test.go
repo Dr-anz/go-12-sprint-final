@@ -53,7 +53,9 @@ func TestAddGetDelete(t *testing.T) {
 
 	// delete
 	err = store.Delete(parcel.Number)
+	require.NoError(t, err) // ДОБАВЛЕНО: проверка ошибки удаления
 
+	// verify deletion
 	stored, err = store.Get(parcel.Number)
 	require.Equal(t, sql.ErrNoRows, err)
 }
