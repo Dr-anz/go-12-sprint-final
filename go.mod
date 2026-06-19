@@ -1,4 +1,4 @@
-module github.com/Dr-anz/final-main
+module github.com/Dr-anz/go-12-sprint-final
 
 go 1.25.0
 
