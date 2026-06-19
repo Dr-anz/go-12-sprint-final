@@ -1,0 +1,60 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  tags:
+    - 'v*'
+
+jobs:
+  test-and-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+
+      - name: Run go vet (linting)
+        run: go vet ./...
+
+      - name: Run staticcheck (additional linting)
+        run: |
+          go install honnef.co/go/tools/cmd/staticcheck@latest
+          staticcheck ./...
+
+      - name: Run tests
+        run: go test -v ./...
+
+  publish-to-dockerhub:
+    needs: test-and-lint
+    runs-on: ubuntu-latest
+    if: contains(github.ref, 'tags/v')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/go-12-sprint-final:${{ github.ref_name }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/go-12-sprint-final:latest
+
+      - name: Verify image was pushed
+        run: |
+          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/go-12-sprint-final:${{ github.ref_name }}
+          echo "✅ Image ${{ secrets.DOCKERHUB_USERNAME }}/go-12-sprint-final:${{ github.ref_name }} successfully published to DockerHub"
