@@ -1,3 +1,5 @@
+# Использую GitHub Container Registry, т.к. Docker Hub недоступен
+
 name: CI/CD Pipeline
 
 on:
@@ -40,26 +42,37 @@ jobs:
     needs: test-and-lint
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: read
+      packages: write
+    env:
+      REGISTRY: ghcr.io
+      IMAGE_NAME: ${{ github.repository }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v4
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push Docker image
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=tag
+            type=semver,pattern={{version}}
+            type=sha
+
+      - name: Build and push to GitHub Container Registry
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
-          tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/go-12-sprint-final:${{ github.ref_name }}
-            ${{ secrets.DOCKERHUB_USERNAME }}/go-12-sprint-final:latest
-
-      - name: Verify image was pushed
-        run: |
-          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/go-12-sprint-final:${{ github.ref_name }}
-          echo "✅ Image ${{ secrets.DOCKERHUB_USERNAME }}/go-12-sprint-final:${{ github.ref_name }} successfully published to DockerHub"
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
