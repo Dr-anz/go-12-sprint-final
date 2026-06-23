@@ -53,9 +53,18 @@ func TestAddGetDelete(t *testing.T) {
 
 	// delete
 	err = store.Delete(parcel.Number)
+	require.NoError(t, err) // ДОБАВЛЕНО: проверка ошибки удаления
 
+	// verify deletion
 	stored, err = store.Get(parcel.Number)
 	require.Equal(t, sql.ErrNoRows, err)
+
+	// Проверка: если Get возвращает пустой объект, проверяем его поля
+	require.Zero(t, stored.Number)
+	require.Zero(t, stored.Client)
+	require.Empty(t, stored.Status)
+	require.Empty(t, stored.Address)
+	require.Empty(t, stored.CreatedAt)
 }
 
 // TestSetAddress проверяет обновление адреса
